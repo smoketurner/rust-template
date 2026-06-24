@@ -30,6 +30,9 @@ cargo test --locked --workspace
 cargo deny check
 ```
 
+- For changes touching the **data layer, crypto/TLS, or dependencies**, verify the review
+  gates in [`code-standards.md`](code-standards.md) pass (links into `docs/dsql.md`,
+  `docs/migrations.md`, `docs/crypto.md`)
 - Formatting runs on **stable** (`.rustfmt.toml` uses stable-only options — no nightly needed)
 - Update `CHANGELOG.md` (`[Unreleased]` section if no version assigned)
 - If you touched the data layer, run migrations against both SQLite and a Postgres/DSQL

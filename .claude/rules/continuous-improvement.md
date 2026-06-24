@@ -57,6 +57,10 @@ Features prone to silent breakage — live-test before any PR that touches them:
 - OCC retry handling on SQLSTATE `40001` (`OC000`/`OC001`)
 - aws-lc-rs default crypto provider installed exactly once at startup
 
+The implementation rules behind these paths are the review gates in
+[`code-standards.md`](code-standards.md); the full stack patterns are the `docs/` table in
+[`README.md`](../../README.md). Read them before changing the code behind any path above.
+
 ## Environment Setup
 
 - **SQLite**: no setup; file lives at `.local/testing/data/`
