@@ -1,0 +1,6 @@
+# Normalize line endings to LF on checkin.
+* text=auto eol=lf
+
+# Mark generated files so they collapse in diffs and don't skew language stats.
+Cargo.lock linguist-generated=true
+**/static/css/output.css linguist-generated=true

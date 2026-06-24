@@ -1,0 +1,9 @@
+# rustfmt configuration. Stable options only, so `cargo fmt` works without
+# a nightly toolchain. See https://rust-lang.github.io/rustfmt/
+
+edition                = "2024"
+max_width              = 100
+hard_tabs              = false
+tab_spaces             = 4
+use_field_init_shorthand = true
+newline_style          = "Unix"

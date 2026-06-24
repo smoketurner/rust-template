@@ -1,0 +1,32 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(uname)\" = \"Linux\" ] && (dpkg -s libudev-dev > /dev/null 2>&1 || sudo apt-get update && sudo apt-get install -y libudev-dev cmake golang-go clang) > /dev/null 2>&1; true"
+          },
+          {
+            "type": "command",
+            "command": "[ \"$(uname)\" = \"Linux\" ] && { which rustup > /dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none && . \"$HOME/.cargo/env\"); } > /dev/null 2>&1; true"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "rust-agents@claude-rust-agents": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-rust-agents": {
+      "source": {
+        "source": "github",
+        "repo": "bug-ops/claude-plugins"
+      }
+    }
+  }
+}

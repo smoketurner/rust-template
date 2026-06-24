@@ -1,0 +1,199 @@
+# Virtual workspace manifest for the rust-template.
+#
+# This template ships NO member crates on purpose. Add your crates under
+# `crates/` (see crates/README.md) and they will be picked up by the glob below.
+# Until at least one crate exists, `cargo build` reports "no members" — that is
+# expected for a fresh template.
+#
+# Member crates inherit shared metadata, lints, and dependency pins from this
+# file with:
+#
+#     [package]
+#     edition.workspace      = true
+#     rust-version.workspace = true
+#     license.workspace      = true
+#
+#     [lints]
+#     workspace = true
+#
+#     [dependencies]
+#     tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[workspace]
+resolver = "3"
+members  = ["crates/*"]
+
+[workspace.package]
+version      = "0.1.0"
+edition      = "2024"
+rust-version = "1.96.0"
+license      = "Apache-2.0 OR MIT"
+repository   = "https://github.com/smoketurner/rust-template"
+publish      = false
+
+# ---------------------------------------------------------------------------
+# Dependency pins
+#
+# Every entry is pinned to an exact version (`=x.y.z`) with default features
+# disabled. Member crates opt into the crates and features they actually need
+# (`foo = { workspace = true, features = ["..."] }`). Unused entries here cost
+# nothing — they are a curated, version-locked menu, not a build input.
+#
+# Crypto note: TLS goes through rustls + aws-lc-rs everywhere. Do not enable
+# `ring` or OpenSSL features on any of these. See docs/crypto.md.
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+# Async runtime & web stack
+tokio              = { version = "=1.52.3", default-features = false }
+tokio-util         = { version = "=0.7.18", default-features = false }
+axum               = { version = "=0.8.9", default-features = false }
+axum-extra         = { version = "=0.12.6", default-features = false }
+axum-server        = { version = "=0.8.0", default-features = false }
+tower              = { version = "=0.5.3", default-features = false }
+tower-http         = { version = "=0.7.0", default-features = false }
+tower_governor     = { version = "=0.8.0", default-features = false }
+
+# Data layer: SQLite (local/test) + Postgres/Aurora DSQL (production)
+sqlx               = { version = "=0.9.0", default-features = false }
+sea-query          = { version = "=1.0.1", default-features = false }
+sea-query-sqlx     = { version = "=0.9.1", default-features = false }
+
+# AWS SDK + DSQL IAM auth
+aws-config         = { version = "=1.8.18", default-features = false }
+aws-credential-types = { version = "=1.2.14", default-features = false }
+aws-sdk-dsql       = { version = "=1.60.0", default-features = false }
+
+# TLS / crypto — aws-lc-rs is the single crypto provider
+aws-lc-rs          = { version = "=1.17.0", default-features = false }
+rustls             = { version = "=0.23.41", default-features = false }
+tokio-rustls       = { version = "=0.26.4", default-features = false }
+webpki-roots       = { version = "=0.26.11", default-features = false }
+
+# Embedded UI: assets, templates, localization
+rust-embed         = { version = "=8.11.0", default-features = false }
+mime_guess         = { version = "=2.0.5", default-features = false }
+askama             = { version = "=0.16.0", default-features = false }
+fluent-bundle      = { version = "=0.16.0", default-features = false }
+i18n-embed         = { version = "=0.16.0", default-features = false }
+i18n-embed-fl      = { version = "=0.10.0", default-features = false }
+unic-langid        = { version = "=0.9.6", default-features = false }
+
+# Serialization, IDs, time
+serde              = { version = "=1.0.228", default-features = false }
+serde_json         = { version = "=1.0.150", default-features = false }
+uuid               = { version = "=1.23.3", default-features = false } # IDs — enable "v7"; use Uuid::now_v7()
+jiff               = { version = "=0.2.29", default-features = false } # date/time — preferred over chrono/time
+secrecy            = { version = "=0.10.3", default-features = false }
+base64             = { version = "=0.22.1", default-features = false }
+
+# Errors — thiserror for libraries, anyhow for binaries
+anyhow             = { version = "=1.0.102", default-features = false }
+thiserror          = { version = "=2.0.18", default-features = false }
+
+# CLI & observability
+clap               = { version = "=4.6.1", default-features = false }
+tracing            = { version = "=0.1.44", default-features = false }
+tracing-subscriber = { version = "=0.3.23", default-features = false }
+
+# Testing
+proptest           = { version = "=1.11.0", default-features = false }
+
+# ---------------------------------------------------------------------------
+# Lints — applied to every member crate via `[lints] workspace = true`.
+# This is the strict baseline. Tests that legitimately need to panic opt out
+# locally, e.g. `#[expect(clippy::unwrap_used, reason = "test asserts Ok")]`.
+# ---------------------------------------------------------------------------
+[workspace.lints.rust]
+unsafe_code           = "deny"
+unreachable_pub       = "warn"
+non_ascii_idents      = "deny"
+trivial_casts         = "warn"
+trivial_numeric_casts = "warn"
+unused_lifetimes      = "warn"
+single_use_lifetimes  = "warn"
+
+[workspace.lints.clippy]
+# Whole pedantic group on as warnings; specific rules below override it.
+pedantic = { level = "warn", priority = -1 }
+
+# Panic prevention
+unwrap_used         = "deny"
+expect_used         = "deny"
+panic               = "deny"
+unreachable         = "deny"
+todo                = "deny"
+unimplemented       = "deny"
+exit                = "deny"
+unwrap_in_result    = "deny"
+panic_in_result_fn  = "deny"
+get_unwrap          = "deny"
+
+# Indexing / slicing can panic — prefer .get()
+indexing_slicing    = "deny"
+string_slice        = "deny"
+
+# Arithmetic that can panic or silently misbehave
+modulo_arithmetic       = "deny"
+integer_division        = "deny"
+arithmetic_side_effects = "deny"
+
+# Lossy / surprising numeric `as` casts
+cast_possible_truncation = "deny"
+cast_sign_loss           = "deny"
+cast_possible_wrap       = "deny"
+cast_precision_loss      = "deny"
+checked_conversions      = "deny"
+
+# Time / float hazards
+unchecked_duration_subtraction = "deny"
+float_cmp           = "deny"
+float_cmp_const     = "deny"
+lossy_float_literal = "deny"
+zero_divided_by_zero = "deny"
+
+# Conversions / formatting that hide panics
+fallible_impl_from   = "deny"
+recursive_format_impl = "deny"
+
+# Stack / iteration hazards
+large_stack_arrays  = "deny"
+large_stack_frames  = "deny"
+infinite_iter       = "deny"
+
+# Uninitialized memory / UB
+mem_replace_with_uninit = "deny"
+uninit_assumed_init     = "deny"
+uninit_vec              = "deny"
+
+# Async / concurrency safety
+await_holding_lock = "deny"
+large_futures      = "deny"
+mem_forget         = "deny"
+mutex_atomic       = "deny"
+
+# Hygiene
+dbg_macro          = "deny"
+print_stdout       = "deny"
+print_stderr       = "deny"
+rc_buffer          = "deny"
+map_unwrap_or      = "deny"
+let_underscore_must_use = "deny"
+
+# No silent escape hatches: every allow must justify itself (use #[expect]).
+allow_attributes              = "deny"
+allow_attributes_without_reason = "deny"
+
+# Ratchet against monolithic functions.
+too_many_lines = "warn"
+
+# Pedantic relaxations (too noisy for this codebase style).
+module_name_repetitions = "allow"
+similar_names           = "allow"
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+[profile.release]
+lto           = "thin"
+codegen-units = 1
+strip         = "symbols"

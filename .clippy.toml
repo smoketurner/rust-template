@@ -1,0 +1,14 @@
+# Clippy tuning. See https://doc.rust-lang.org/clippy/configuration.html
+# Lint levels themselves live in [workspace.lints.clippy] in Cargo.toml.
+
+# Pre-1.0 workspace: changing the exported API is fine.
+avoid-breaking-exported-api = false
+
+# Complexity ceilings.
+cognitive-complexity-threshold = 30
+too-many-lines-threshold       = 100
+
+# Short names that are acceptable below the min-chars threshold.
+allowed-idents-below-min-chars = ["x", "y", "z", "i", "j", "k", "n", "s", "e", "id", "db", "tx", "rx", "ok"]
+
+# MSRV is read automatically from the workspace `rust-version` field.

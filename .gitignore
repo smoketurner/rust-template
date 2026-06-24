@@ -1,0 +1,28 @@
+# Rust build output
+/target
+**/*.rs.bk
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# Generated Tailwind CSS (built from styles/input.css)
+**/static/css/output.css
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Working directory (agent handoffs, plans, testing)
+.local/
