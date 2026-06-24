@@ -178,3 +178,7 @@ macro_rules! with_dsql_retry {
 
 Keep retried transactions **idempotent** — that's why client-generated ids and
 upsert-friendly writes matter (`dsql.md`).
+
+The constants here (3 retries, 25 ms base, no jitter) are deliberately small for a template.
+`dsql.md` records AWS's fuller envelope — up to 5 attempts, 50 ms base, jitter, 5 s cap — widen
+toward it under real contention.

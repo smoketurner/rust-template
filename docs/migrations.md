@@ -19,7 +19,12 @@ crates/<name>-server/
 - **One DDL statement per file.** Never mix DDL and DML in one file.
 - **UUID v7 primary keys** (client-supplied, `uuid::Uuid::now_v7()`), no `SERIAL`. No `FOREIGN KEY`.
 - **Indexes in their own file** using `CREATE INDEX ASYNC` (synchronous `CREATE INDEX` only
-  works on empty tables).
+  works on empty tables). Limits: ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key. Convert
+  Postgres index types — `CONCURRENTLY` → `ASYNC`, `USING gin/gist/brin` → btree; a partial
+  index drops its `WHERE`, and an expression index becomes a `GENERATED ALWAYS AS (expr)
+  STORED` column that the index targets.
+- **Settle `enum`/`CHECK` values at `CREATE TABLE`.** Changing them later forces a
+  table-recreation migration — DSQL has no `ALTER ... TYPE` / `DROP CONSTRAINT` (see `dsql.md`).
 - Keep the SQLite copy semantically equivalent; differences (e.g. `TEXT` vs `uuid`) are fine
   as long as the columns line up.
 
