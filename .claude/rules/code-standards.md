@@ -1,9 +1,14 @@
 # Code Standards — review gates
 
 Non-negotiable invariants for this stack that the compiler does **not** catch. Read this
-before implementing or reviewing a change; `rust-code-reviewer` and `team-develop` treat the
-checklists below as gates. Each item links to the doc with the full rationale and code — this
-file is the gate, the doc is the detail.
+before implementing or reviewing a change. Each item links to the doc with the full rationale
+and code — this file is the gate, the doc is the detail.
+
+> The `rust-agents` plugin does **not** auto-load this file. Its agents read
+> `commits-and-issues.md`, `branching.md`, and `continuous-improvement.md` — each of which
+> points here — and the main session reaches it through `CLAUDE.md`. Keep those pointers
+> intact so the gates below reach plugin-spawned agents doing data-layer, crypto, or
+> dependency work.
 
 ## Crypto & TLS → [docs/crypto.md](../../docs/crypto.md)
 

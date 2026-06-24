@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Guidance for Claude Code and the `rust-agents` plugin when working in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+It also drives the `rust-agents` Claude Code plugin (conventions live in `.claude/rules/`).
 
 ## What this is
 
@@ -70,7 +72,16 @@ make css-build # build + minify Tailwind for the server crate
 make help      # list targets
 ```
 
+Run a specific test (once at least one crate exists):
+
+```bash
+cargo test -p <crate> <test_name>    # one test (name filter) in one crate
+cargo test -p <crate>                # all tests in one crate
+cargo test --workspace <test_name>   # name filter across the workspace
+```
+
 > Until you add a crate under `crates/`, cargo commands report "no members" — expected.
+> Coverage and mutation testing are local-only: `make test-coverage`, `make test-mutants`.
 
 ## Where to read more
 

@@ -19,15 +19,38 @@ must be written for DSQL, not vanilla Postgres. This is the reference; `migratio
 | Extensions (`CREATE EXTENSION`) | ✗ | No `uuid-ossp`; generate UUID v7 in app (`Uuid::now_v7()`) |
 | Temporary tables | ✗ | CTEs / subqueries |
 | `TRUNCATE` | ✗ | `DELETE FROM ...` |
-| `money`, `enum`, range/geometric/custom types, hstore | ✗ | `numeric(19,2)`, `varchar` + `CHECK`, explicit columns, `jsonb` |
-| Arrays as column types | ~ runtime only | Avoid array columns |
+| `money`, `enum`, range/geometric/custom types, hstore | ✗ | `numeric(19,4)`, `varchar` + inline `CHECK`, explicit columns, `jsonb` |
+| Arrays as column types | ~ runtime only | Store as `jsonb`; expand with `jsonb_array_elements_text` |
+| Table partitioning (`PARTITION BY`) | ✗ | Flat table — DSQL distributes via PK-ordered storage |
+| Table inheritance (`INHERITS`) | ✗ | Merge inherited columns into each child table |
+| Per-column `COLLATE` | ✗ | Database-wide C collation; `lower(col)` for case-insensitive |
+| `UNLOGGED` tables | ✗ | All tables are durable; drop the keyword (cache in Redis/ElastiCache) |
+| Storage params (`WITH (fillfactor …)`, autovacuum) | ✗ | DSQL manages storage; remove them — no `VACUUM` |
+| `SECURITY DEFINER` functions | ✗ | Runs as caller; re-grant table access or enforce RLS in the app |
 
 Supported and commonly used: `uuid`, `text`/`varchar`, integer/`numeric`/float types,
-`boolean`, `bytea`, date/time/`timestamptz` (UTC), `jsonb` (≤ 1 MiB), and views.
+`boolean`, `bytea`, date/time/`timestamptz` (UTC), `jsonb` (≤ 1 MiB), views, `CREATE DOMAIN`,
+and `GENERATED ALWAYS AS (expr) STORED` columns.
 
 Sources: [supported SQL features](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-sql-features.html),
 [supported data types](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html),
 [migration guide](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-migration-guide.html).
+
+## Type and column rules
+
+- **`NUMERIC` is capped at precision 38, scale 37.** Specify precision explicitly
+  (`numeric(20,10)`); DSQL rejects unbounded `NUMERIC`.
+- **C collation, database-wide.** Per-column `COLLATE` is rejected, and `ORDER BY` on text
+  sorts by raw byte value (uppercase before lowercase, non-ASCII after `z`). Use `lower(col)`
+  for case-insensitive ordering and comparison.
+- **No array columns.** Store collections as `jsonb` and expand with
+  `jsonb_array_elements_text(col)` at query time.
+- **`enum` → `varchar` + inline `CHECK`, fixed at `CREATE TABLE`.** Adding or changing a
+  `CHECK` later means recreating the table (`ALTER ... TYPE` / `DROP CONSTRAINT` are
+  unsupported), so settle the allowed values up front.
+- **Composite types** become a `jsonb` column (flexible) or separate columns (indexable).
+- **At most 10 schemas per database.** Past 10, consolidate into `public` with table-name
+  prefixes.
 
 ## Primary keys: UUID v7, client-generated
 
@@ -66,6 +89,26 @@ Source: [DDL and distributed transactions](https://docs.aws.amazon.com/aurora-ds
   `SELECT * FROM sys.wait_for_job('<job_id>');`
 - Index creation is async, so it lives outside the one-DDL-per-transaction rule.
 
+**Limits:** at most **24 indexes per table**, **8 columns per index**, and a **1 KiB**
+key-size cap. Near the limit, prefer composite and `INCLUDE` indexes over many single-column
+ones.
+
+**Converting Postgres index types.** Most rewrite mechanically (`USING gin/gist/brin/hash` →
+btree, `CONCURRENTLY` → `ASYNC`, `INCLUDE` and sort order preserved). The cases that need a
+schema change:
+
+- **Partial index** (`WHERE …`) — drop the predicate for a full index, or fold the filter
+  column into a composite index.
+- **Expression index** (`lower(email)`, `preferences->>'city'`) — add a
+  `GENERATED ALWAYS AS (expr) STORED` column and index that. Use `STORED`, not
+  `ADD COLUMN` + backfill (the gap between the two statements leaves new rows `NULL`).
+- **GIN/GiST** — extract the key to a `STORED` generated column + btree, normalize arrays to a
+  join table, or move full-text/fuzzy search to OpenSearch.
+
+**Readiness:** an `ASYNC` index is unusable until it reports ready. Check with
+`SELECT indexrelid::regclass, indisvalid FROM pg_index WHERE NOT indisvalid;` and don't depend
+on it until `indisvalid = true`.
+
 Source: [asynchronous indexes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-create-index-async.html).
 
 ## Optimistic concurrency control
@@ -76,10 +119,28 @@ DSQL takes no locks; it detects conflicts at commit and aborts the loser with **
 - **`OC000`** — data conflict (two transactions wrote the same row).
 - **`OC001`** — schema/catalog conflict (stale cached catalog).
 
-Every write transaction must be **idempotent and retried** with backoff. See the
-`with_dsql_retry!` pattern in `sea-query.md`.
+Every write transaction must be **idempotent and retried** with backoff. A workable envelope:
+**up to 5 attempts**, **50 ms** base delay, exponential backoff with jitter —
+`delay = min(50ms · 2^attempt + rand(0, 50ms), 5s)` — retrying **only** on `40001` and
+surfacing every other error immediately; the 5 s cap keeps the loop well under the 5-minute
+transaction limit. The `with_dsql_retry!` macro in `sea-query.md` implements this.
+
+Reduce conflicts at the source: keep transactions short, use UUID v7 PKs so writes spread
+across partitions, make writes idempotent (`INSERT … ON CONFLICT (id) DO NOTHING`, or a
+conditional `UPDATE … WHERE`), shard hot counters, and chunk bulk writes into **100–500 row**
+batches rather than filling the 3,000-row limit.
 
 Source: [concurrency control](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-concurrency-control.html).
+
+## Referential integrity in code
+
+DSQL ignores `FOREIGN KEY`, so relationships are enforced in application code. The rule that
+keeps this correct under OCC: **the existence check and the write run in the same
+transaction.** A `SELECT` confirming the parent row adds it to the transaction's read set; if a
+concurrent transaction deletes that parent and commits first, this transaction's commit is
+rejected with `40001` and retries — so the check can't go stale between validate and insert. A
+validation helper must be `LANGUAGE sql` (`plpgsql` is rejected); act on a false result by
+raising in the application, inside that same transaction.
 
 ## Transaction limits (verify current values)
 
@@ -101,13 +162,24 @@ Source: [quotas and limits](https://docs.aws.amazon.com/aurora-dsql/latest/userg
 Sources: [accessing Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/accessing.html),
 [authentication tokens](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/authentication-token.html).
 
+## Upstream reference
+
+AWS publishes a DSQL skill (the `/dsql` Claude skill, Apache-2.0) that encodes much of the
+above and adds a `dsql_lint` tool for live SQL-compatibility checks; install it with
+`npx skills add awslabs/mcp --skill dsql --agent claude-code`. The rules here are harvested
+from it but adapted to this stack, and they diverge in two places: this template uses **UUID
+v7, not `SERIAL`/`IDENTITY`**, and does **not** require a `tenant_id` column (the skill assumes
+multi-tenancy). Where they differ, this doc and `code-standards.md` win.
+
 ## Design checklist
 
 - [ ] UUID v7 primary keys, client-generated; no `gen_random_uuid()` (v4) or `SERIAL`
-- [ ] No foreign keys in DDL; validate relationships in code
+- [ ] No foreign keys in DDL; validate relationships in code, in the write's transaction
 - [ ] One DDL statement per migration file; never DDL + DML together
 - [ ] Indexes on non-empty tables via `CREATE INDEX ASYNC` + `sys.wait_for_job`
+- [ ] ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key; expression/partial/GIN indexes converted
 - [ ] All writes idempotent and wrapped in OCC retry
 - [ ] Bulk writes chunked under the per-transaction row/byte limits
 - [ ] Pool `max_lifetime` below the 60-minute connection cap; token refresh before expiry
 - [ ] `numeric`/`varchar`+`CHECK`/`jsonb` instead of `money`/`enum`/custom types
+- [ ] `enum` as `varchar` + inline `CHECK` at `CREATE TABLE`; ≤ 10 schemas per database
