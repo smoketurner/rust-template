@@ -10,7 +10,7 @@ An opinionated **template repository** for Rust services. It ships configuration
 CI, supply-chain policy, and documented patterns — but **no member crates**. The chosen
 stack:
 
-- **Workspace** of crates under `crates/` (edition 2024, resolver 3, MSRV 1.96)
+- **Workspace** of crates under `crates/` (edition 2024, resolver 3, MSRV 1.96.1)
 - **SQLite** for local dev and in-memory tests; **Amazon Aurora DSQL** (Postgres-compatible)
   in production
 - **sea-query** as the query-building translation layer between the two backends, over **sqlx**
@@ -25,7 +25,7 @@ Cargo.toml            # virtual workspace: deps menu + strict lints + profiles
 .clippy.toml          # clippy tuning (levels live in Cargo.toml)
 .rustfmt.toml         # stable-only formatting
 deny.toml             # advisories, license allow-list, OpenSSL/ring bans
-rust-toolchain.toml   # pinned 1.96.0 + rustfmt + clippy
+rust-toolchain.toml   # pinned 1.96.1 + rustfmt + clippy
 Makefile              # build / fmt / lint / test / deny / css / run
 crates/               # YOUR crates go here (none shipped) — see crates/README.md
 docs/                 # the stack patterns, with code

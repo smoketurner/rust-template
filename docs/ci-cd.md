@@ -25,7 +25,7 @@ orchestrated by `docker-bake.hcl`, invoked from a CI `build` matrix job.
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM rust:1.96.0-alpine AS base
+FROM rust:1.96.1-alpine AS base
 RUN apk add --no-cache musl-dev pkgconfig cmake make clang linux-headers
 RUN cargo install cargo-chef --locked
 
