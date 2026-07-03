@@ -1,0 +1,39 @@
+# Managed by prek (https://prek.j178.dev) — fast Rust reimplementation of pre-commit.
+#   Install:  prek install
+#   Run all:  prek run --all-files
+#   Update:   prek auto-update --cooldown-days 7
+
+repos:
+  # --- Rust: format check via the pinned project toolchain (matches uv/ruff) ---
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt (check)
+        entry: cargo fmt --all --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # --- Generic file hygiene ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  # --- GitHub Actions: lint + security audit (hooks auto-scope to .github/workflows) ---
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.26.1
+    hooks:
+      - id: zizmor
