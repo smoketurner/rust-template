@@ -6,7 +6,7 @@ Prerequisites:
 
 - **Rust** — pinned in `rust-toolchain.toml`; install via [rustup](https://rustup.rs/)
 - **cmake** + **clang** — build dependency of `aws-lc-rs`
-- **Tailwind CSS CLI** — for UI work (`make css-build`)
+- **Tailwind CSS CLI** — v4.3.3 standalone CLI, for UI work (`make css-build`)
 
 Common commands (`make help` lists all):
 

@@ -180,16 +180,22 @@ struct IndexTemplate {
 
 ## Tailwind pipeline
 
+Tailwind CSS **v4.3.3** (standalone CLI). v4 is CSS-first — there is no `tailwind.config.js`.
+The single `@import` pulls in the framework and any `@theme`/`@source` customization lives in
+the same CSS file:
+
 ```css
 /* styles/input.css */
 @import "tailwindcss";
 ```
 
-```js
-// tailwind.config.js
-export default {
-  content: ["./templates/**/*.html", "./src/**/*.rs"],
-};
+Sources are detected automatically: the CLI scans the crate for class names, skipping
+`.gitignore`d and binary files, so `templates/**/*.html` and `src/**/*.rs` are picked up with
+no `content` array. To register a path outside the auto-detected tree, add an `@source`
+directive to `input.css`:
+
+```css
+@source "../shared-crate/templates";
 ```
 
 Build to the embedded `static/` dir (the `Makefile` has `css-build`/`css-dev`):
