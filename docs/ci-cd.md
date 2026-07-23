@@ -12,43 +12,26 @@
 - **`.github/dependabot.yml`** — `cargo` + `github-actions`, weekly, grouped, 7-day cooldown.
 
 These cover everything a library/workspace needs. The pieces below produce and ship
-**binaries/containers**, so they're documented here rather than scaffolded — add them once
-you have a `-server`/`-cli` crate. They mirror what `smoketurner/devbox` and `vouch-sh/vouch`
-do.
+**binaries/containers**. They mirror what `smoketurner/devbox` and `vouch-sh/vouch` do.
+
+The repo ships them as **samples** that reference placeholder `app-common`/`app-server`/
+`app-cli` crates — they won't build until you rename those to your crates and add the CI
+jobs shown below:
+
+- [`Dockerfile`](../Dockerfile) + [`.dockerignore`](../.dockerignore) — runtime server image
+  (static musl binary → distroless).
+- [`Dockerfile.build`](../Dockerfile.build) + [`docker-bake.hcl`](../docker-bake.hcl) +
+  [`Dockerfile.build.dockerignore`](../Dockerfile.build.dockerignore) — reproducible
+  multi-target binaries for the CI `build` matrix and releases.
+
+The CI/release **workflow jobs** below are not scaffolded — wire them up when you add these.
 
 ## Deferred: static musl binaries (`build` job)
 
-Reproducible static binaries via `cargo-chef` (dependency caching) in `Dockerfile.build`,
-orchestrated by `docker-bake.hcl`, invoked from a CI `build` matrix job.
-
-`Dockerfile.build` (abridged):
-
-```dockerfile
-# syntax=docker/dockerfile:1
-FROM rust:1.96.1-alpine AS base
-RUN apk add --no-cache musl-dev pkgconfig cmake make clang linux-headers
-RUN cargo install cargo-chef --locked
-
-FROM base AS planner
-WORKDIR /app
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM base AS builder
-ARG TARGET
-WORKDIR /app
-RUN rustup target add "${TARGET}"
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --locked --target "${TARGET}" --recipe-path recipe.json
-COPY . .
-RUN cargo build --release --locked --target "${TARGET}" -p <name>-server
-
-FROM scratch AS output
-COPY --from=builder /app/target/${TARGET}/release/<name>-server /
-```
-
-`docker-bake.hcl` defines a `ci` target with `cache-from`/`cache-to` GitHub Actions cache.
-The CI job:
+Reproducible static binaries via `cargo-chef` (dependency caching) in the shipped
+[`Dockerfile.build`](../Dockerfile.build), orchestrated by [`docker-bake.hcl`](../docker-bake.hcl)
+(a `ci` target with `cache-from`/`cache-to` GitHub Actions cache), invoked from a CI `build`
+matrix job that is not scaffolded:
 
 ```yaml
 build:
@@ -95,9 +78,10 @@ crate-named assets, `sha256sum` them, and publish a GitHub release. The publish 
 
 ## When you add these
 
-1. Add `Dockerfile`, `Dockerfile.build`, `docker-bake.hcl`, and a deny-by-default
-   `.dockerignore` — allowlist only what the build needs so the context stays small and
-   cache-stable:
+1. Rename the placeholder `app-*` paths in the shipped `Dockerfile`, `.dockerignore`,
+   `Dockerfile.build`, `docker-bake.hcl`, and `Dockerfile.build.dockerignore` to your crates,
+   and update the `image.source` label. Keep `.dockerignore` a deny-by-default allowlist so
+   the runtime-image context stays small and cache-stable:
 
    ```gitignore
    *

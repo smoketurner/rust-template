@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1
+#
+# Sample Dockerfile for producing reproducible static musl binaries.
+# Driven by docker-bake.hcl (targets: ci, cli, server) and, in CI, a build
+# matrix that sets TARGET per runner architecture. This does NOT replace the
+# runtime server image in `Dockerfile`.
+#
+# Uses cargo-chef so dependency compilation is cached: only workspace crates
+# recompile when source changes, as long as Cargo.toml/Cargo.lock are stable.
+#
+# Placeholder crates: `app-common`, `app-server`, `app-cli` — rename to yours.
+# The server binary embeds CSS via rust-embed; there is no Tailwind stage here,
+# so run `make css-build` before baking a target that builds `app-server`.
+
+# Keep this Rust version in sync with rust-toolchain.toml.
+FROM rust:1.97.1-alpine AS base
+# Build dependencies to compile aws-lc-rs from source on musl. No openssl:
+# this stack uses aws-lc-rs exclusively (deny.toml bans openssl/ring).
+RUN apk add --no-cache musl-dev pkgconfig cmake make perl clang linux-headers
+
+# Install cargo-chef (cached with the base OS layer)
+RUN cargo install cargo-chef --locked
+
+# --- Planner: compute the dependency recipe ---
+FROM base AS planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# --- Builder: cook dependencies, then build workspace crates ---
+FROM base AS builder
+
+ARG TARGET
+
+WORKDIR /app
+RUN rustup target add "${TARGET}"
+
+# Cook dependencies from the recipe (cached when only source files change)
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --locked --target "${TARGET}" --recipe-path recipe.json
+
+# Copy source and build workspace crates (only these recompile)
+COPY . .
+
+# Declare build-time ARGs after the cook layer so changes don't bust the cache
+ARG SOURCE_DATE_EPOCH=0
+ARG GENERATE_SBOM=false
+ARG CARGO_PACKAGES="-p app-cli -p app-server"
+
+# Touch entry-point files for reproducible builds
+RUN touch -d "@${SOURCE_DATE_EPOCH}" \
+      crates/app-common/src/lib.rs \
+      crates/app-cli/src/main.rs \
+      crates/app-server/src/main.rs
+
+RUN cargo build --release --locked --target "${TARGET}" ${CARGO_PACKAGES}
+
+# Generate an SBOM if requested
+RUN if [ "${GENERATE_SBOM}" = "true" ]; then \
+      cargo install cargo-cyclonedx --version 0.5.6 \
+      && cargo cyclonedx --target "${TARGET}" --format json; \
+    fi
+
+# Collect only release binaries and SBOMs into /out
+RUN mkdir -p "/out/target/${TARGET}/release" \
+    && for bin in app-cli app-server; do \
+         if [ -f "target/${TARGET}/release/${bin}" ]; then \
+           cp "target/${TARGET}/release/${bin}" "/out/target/${TARGET}/release/"; \
+         fi; \
+       done \
+    && find crates/ -name "*cdx.json" 2>/dev/null | while read -r f; do \
+         mkdir -p "/out/$(dirname "$f")"; \
+         cp "$f" "/out/$f"; \
+       done
+
+FROM scratch AS output
+COPY --from=builder /out/ /

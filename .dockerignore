@@ -1,0 +1,22 @@
+# Deny by default — allowlist only what the build context needs so it stays
+# small and cache-stable. Rename the app-* paths to match your crates.
+
+# Exclude everything by default
+*
+
+# Root build files
+!Cargo.toml
+!Cargo.lock
+
+# Workspace crate manifests (needed for the dependency caching layer)
+!crates/app-common/Cargo.toml
+!crates/app-server/Cargo.toml
+
+# Source code and compile-time assets for the server and its shared crate
+!crates/app-common/src/
+!crates/app-server/src/
+!crates/app-server/migrations/
+!crates/app-server/templates/
+!crates/app-server/static/
+!crates/app-server/styles/
+!crates/app-server/tailwind.config.js
