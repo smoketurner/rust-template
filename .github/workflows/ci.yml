@@ -14,6 +14,9 @@ permissions: {}
 
 env:
   CARGO_TERM_COLOR: always
+  # Deny rustc warnings on plain `cargo build`/`cargo test` (cargo >=1.97) without
+  # invalidating the build cache the way RUSTFLAGS="-D warnings" would.
+  CARGO_BUILD_WARNINGS: deny
 
 # NOTE: the workspace ships no crates yet, so fmt/clippy/test/deny report
 # "no members" until you add the first crate under crates/. CI goes green

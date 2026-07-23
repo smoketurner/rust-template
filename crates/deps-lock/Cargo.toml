@@ -1,0 +1,62 @@
+# Dependency-anchor crate — see src/lib.rs for the full rationale.
+#
+# Every entry in the workspace `[workspace.dependencies]` menu is declared here
+# under `[target.'cfg(any())'.dependencies]`. `cfg(any())` (an empty `any`) is
+# always false, so cargo never compiles these on any platform — but it still
+# resolves them into `Cargo.lock` (the lock is platform-independent). That lets
+# Dependabot, `cargo deny`, and `cargo audit` track every pinned version without
+# building anything, and without creating features that `--all-features` would
+# turn on (which a plain `optional = true` would).
+#
+# MAINTENANCE: when you add an entry to `[workspace.dependencies]` in the root
+# manifest, add the matching `{ workspace = true }` line here.
+[package]
+name                   = "deps-lock"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish                = false
+
+[lints]
+workspace = true
+
+# Never-compiled (cfg(any()) is always false), always-locked dependency anchors.
+[target.'cfg(any())'.dependencies]
+anyhow               = { workspace = true }
+askama               = { workspace = true }
+aws-config           = { workspace = true }
+aws-credential-types = { workspace = true }
+aws-lc-rs            = { workspace = true }
+aws-sdk-dsql         = { workspace = true }
+axum                 = { workspace = true }
+axum-extra           = { workspace = true }
+axum-server          = { workspace = true }
+base64               = { workspace = true }
+clap                 = { workspace = true }
+fluent-bundle        = { workspace = true }
+i18n-embed           = { workspace = true }
+i18n-embed-fl        = { workspace = true }
+jiff                 = { workspace = true }
+mime_guess           = { workspace = true }
+proptest             = { workspace = true }
+rust-embed           = { workspace = true }
+rustls               = { workspace = true }
+sea-query            = { workspace = true }
+sea-query-sqlx       = { workspace = true }
+secrecy              = { workspace = true }
+serde                = { workspace = true }
+serde_json           = { workspace = true }
+sqlx                 = { workspace = true }
+thiserror            = { workspace = true }
+tokio                = { workspace = true }
+tokio-rustls         = { workspace = true }
+tokio-util           = { workspace = true }
+tower                = { workspace = true }
+tower-http           = { workspace = true }
+tower_governor       = { workspace = true }
+tracing              = { workspace = true }
+tracing-subscriber   = { workspace = true }
+unic-langid          = { workspace = true }
+uuid                 = { workspace = true }
+webpki-roots         = { workspace = true }

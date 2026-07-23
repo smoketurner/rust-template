@@ -1,9 +1,12 @@
 # crates/
 
-Your workspace members live here. The template ships **none** — you add them.
+Your workspace members live here. The template ships one: **`deps-lock`**, a code-free
+anchor crate that pins every `[workspace.dependencies]` entry into `Cargo.lock` so
+Dependabot and `cargo update` keep the menu current before real crates exist (see
+[`deps-lock/src/lib.rs`](deps-lock/src/lib.rs)). It compiles nothing — add your own crates
+alongside it.
 
-The root `Cargo.toml` picks up every crate via `members = ["crates/*"]`. Once one crate
-exists, `cargo build`, CI, and the `Makefile` targets work.
+The root `Cargo.toml` picks up every crate via `members = ["crates/*"]`.
 
 ## Recommended decomposition
 

@@ -1,39 +1,77 @@
-# Managed by prek (https://prek.j178.dev) — fast Rust reimplementation of pre-commit.
-#   Install:  prek install
-#   Run all:  prek run --all-files
-#   Update:   prek auto-update --cooldown-days 7
+# prek / pre-commit hook configuration — https://github.com/j178/prek
+#   Install shims:  prek install               (pre-commit + pre-push shims)
+#   Run everything: prek run --all-files
+#   Update:         prek auto-update --cooldown-days 7
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
 
 repos:
-  # --- Rust: format check via the pinned project toolchain (matches uv/ruff) ---
+  # Generic file hygiene + private-key detection (external, SHA-pinned to match the
+  # repo's GitHub Actions convention). Some hooks auto-fix files.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-yaml
+      - id: check-toml
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Local system hooks — call locally installed binaries; no third-party hook code.
   - repo: local
     hooks:
+      # --- fast: every commit ---
       - id: cargo-fmt
-        name: cargo fmt (check)
+        name: cargo fmt --all --check
         entry: cargo fmt --all --check
         language: system
         types: [rust]
         pass_filenames: false
 
-  # --- Generic file hygiene ---
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: trailing-whitespace
-        args: [--markdown-linebreak-ext=md]
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-toml
-      - id: check-merge-conflict
-      - id: check-added-large-files
-      - id: detect-private-key
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
 
-  # --- GitHub Actions: lint + security audit (hooks auto-scope to .github/workflows) ---
-  - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.12
-    hooks:
+      - id: shfmt
+        name: shfmt (diff)
+        entry: shfmt -i 2 -d
+        language: system
+        types: [shell]
+
+      # Workflow lint + security. Only run when a workflow file is staged, so
+      # pre-existing findings block a commit only when that workflow is edited.
       - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
 
-  - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.26.1
-    hooks:
       - id: zizmor
+        name: zizmor
+        entry: zizmor
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      # --- slow: git push only ---
+      - id: cargo-clippy
+        name: cargo clippy --all-targets --all-features -D warnings
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: cargo-test
+        name: cargo test --all-features
+        entry: cargo test --all-features
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [pre-push]

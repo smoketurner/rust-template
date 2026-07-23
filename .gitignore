@@ -26,3 +26,10 @@
 
 # Working directory (agent handoffs, plans, testing)
 .local/
+
+# Mutation testing output (make test-mutants)
+/mutants.out
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/

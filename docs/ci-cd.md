@@ -95,8 +95,36 @@ crate-named assets, `sha256sum` them, and publish a GitHub release. The publish 
 
 ## When you add these
 
-1. Add `Dockerfile`, `Dockerfile.build`, `docker-bake.hcl`, `.dockerignore`.
-2. Add the `cargo` `docker` ecosystem to `dependabot.yml`.
+1. Add `Dockerfile`, `Dockerfile.build`, `docker-bake.hcl`, and a deny-by-default
+   `.dockerignore` — allowlist only what the build needs so the context stays small and
+   cache-stable:
+
+   ```gitignore
+   *
+   !Cargo.toml
+   !Cargo.lock
+   !crates/*/Cargo.toml
+   !crates/*/src/
+   ```
+
+2. Add the `docker` ecosystem to `dependabot.yml` to keep base-image tags current:
+
+   ```yaml
+   - package-ecosystem: "docker"
+     directory: "/"
+     schedule: { interval: "weekly" }
+     commit-message: { prefix: "docker" }
+     cooldown: { default-days: 7 }
+   ```
+
 3. Pin every new action to a SHA (`secure_workflows.yml` enforces it) — resolve current SHAs
    with `gh api repos/<owner>/<repo>/commits/<tag> --jq .sha`.
 4. Keep `--locked` on every cargo invocation and `persist-credentials: false` on checkout.
+
+Two more patterns to reach for when the code calls for them:
+
+- **Fuzzing** — once a crate parses untrusted input, add a detached `fuzz/` crate
+  (`cargo-fuzz` + `libfuzzer-sys`, its own empty `[workspace]`) and gitignore `fuzz/corpus/`
+  and `fuzz/artifacts/`.
+- **Docs site** — when `docs/` outgrows flat files, migrate to mdBook (`docs/book.toml` +
+  `src/SUMMARY.md`), deploy via a GitHub Pages workflow, and gitignore `docs/book/`.

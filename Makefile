@@ -12,7 +12,7 @@ CARGO ?= cargo
 #   make css-build SERVER_CRATE=my-server
 SERVER_CRATE ?= app-server
 
-.PHONY: all build check fmt fmt-check lint test test-coverage test-mutants deny css-dev css-build run help
+.PHONY: all build check clean fmt fmt-check lint test test-coverage test-mutants deny hooks css-dev css-build run help
 
 all: build
 
@@ -23,6 +23,9 @@ build: ## Build the workspace (release)
 
 check: ## Type-check the workspace
 	$(CARGO) check --workspace --all-targets --all-features
+
+clean: ## Remove the cargo target/ build artifacts
+	$(CARGO) clean
 
 ##@ Quality
 
@@ -40,12 +43,16 @@ test: ## Run unit tests
 
 test-coverage: ## Generate an HTML coverage report (requires cargo-llvm-cov)
 	$(CARGO) llvm-cov --workspace --html
+	@echo "Coverage report: target/llvm-cov/html/index.html"
 
 test-mutants: ## Run mutation testing (requires cargo-mutants)
 	$(CARGO) mutants
 
 deny: ## Check advisories, licenses, bans, and sources
 	$(CARGO) deny check
+
+hooks: ## Install prek git hooks (pre-commit + pre-push)
+	prek install
 
 ##@ UI assets
 

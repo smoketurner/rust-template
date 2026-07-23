@@ -7,8 +7,10 @@ It also drives the `rust-agents` Claude Code plugin (conventions live in `.claud
 ## What this is
 
 An opinionated **template repository** for Rust services. It ships configuration, lints,
-CI, supply-chain policy, and documented patterns — but **no member crates**. The chosen
-stack:
+CI, supply-chain policy, and documented patterns, plus one code-free member crate —
+`crates/deps-lock` — that anchors the `[workspace.dependencies]` menu into `Cargo.lock`
+so Dependabot and `cargo update` can keep the pins current before you add real crates.
+The chosen stack:
 
 - **Workspace** of crates under `crates/` (edition 2024, resolver 3, MSRV 1.96.1)
 - **SQLite** for local dev and in-memory tests; **Amazon Aurora DSQL** (Postgres-compatible)
@@ -27,7 +29,7 @@ Cargo.toml            # virtual workspace: deps menu + strict lints + profiles
 deny.toml             # advisories, license allow-list, OpenSSL/ring bans
 rust-toolchain.toml   # pinned 1.96.1 + rustfmt + clippy
 Makefile              # build / fmt / lint / test / deny / css / run
-crates/               # YOUR crates go here (none shipped) — see crates/README.md
+crates/               # deps-lock anchor crate + YOUR crates — see crates/README.md
 docs/                 # the stack patterns, with code
 .claude/rules/        # branching, commits, continuous-improvement conventions
 ```
@@ -56,6 +58,9 @@ data-layer, crypto, or dependency change:
 
 - **`.claude/rules/code-standards.md`** — crypto (aws-lc-rs only), DSQL/data-layer schema
   rules, and workspace hygiene, as review-gate checklists linking to `docs/`.
+- **`.claude/rules/development-discipline.md`** — how agents carry out design,
+  implementation, diagnostics, and agent-team hand-offs (the *how*, complementing
+  `code-standards.md`'s *what*).
 - `.claude/rules/branching.md`, `.claude/rules/commits-and-issues.md`,
   `.claude/rules/continuous-improvement.md` — branch/commit/CI conventions for the
   `rust-agents` flow.
@@ -80,7 +85,8 @@ cargo test -p <crate>                # all tests in one crate
 cargo test --workspace <test_name>   # name filter across the workspace
 ```
 
-> Until you add a crate under `crates/`, cargo commands report "no members" — expected.
+> `crates/deps-lock` is a code-free anchor (see `crates/deps-lock/src/lib.rs`); it compiles
+> nothing, so most cargo commands stay near-instant until you add real crates.
 > Coverage and mutation testing are local-only: `make test-coverage`, `make test-mutants`.
 
 ## Where to read more
