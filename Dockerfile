@@ -58,7 +58,7 @@ RUN cd crates/app-server \
 
 # cargo-chef base stage — shared between planner and builder.
 # Keep this Rust version in sync with rust-toolchain.toml.
-FROM rust:1.97.1-alpine AS chef
+FROM rust:1.98.0-alpine AS chef
 RUN cargo install cargo-chef --locked
 WORKDIR /app
 

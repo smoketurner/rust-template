@@ -13,7 +13,7 @@
 # so run `make css-build` before baking a target that builds `app-server`.
 
 # Keep this Rust version in sync with rust-toolchain.toml.
-FROM rust:1.97.1-alpine AS base
+FROM rust:1.98.0-alpine AS base
 # Build dependencies to compile aws-lc-rs from source on musl. No openssl:
 # this stack uses aws-lc-rs exclusively (deny.toml bans openssl/ring).
 RUN apk add --no-cache musl-dev pkgconfig cmake make perl clang linux-headers
