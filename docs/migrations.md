@@ -17,6 +17,14 @@ crates/<name>-server/
 ## Authoring rules (postgres/ dir)
 
 - **One DDL statement per file.** Never mix DDL and DML in one file.
+- **Never edit a shipped migration.** Change the schema by adding a new numbered file in
+  both directories. On SQLite, sqlx's migrator checksums each applied file and refuses a
+  database whose recorded checksum no longer matches. The DSQL runner below records only
+  the version, so an edited file is silently skipped on every database that already ran it
+  and those schemas drift from new ones.
+- **Write migration SQL literally.** Don't generate it from the sea-query `Iden` enums
+  (`sea-query.md`): they describe the schema as it is now, so a generated migration would
+  change meaning as the schema evolves.
 - **UUID v7 primary keys** (client-supplied, `uuid::Uuid::now_v7()`), no `SERIAL`. No
   `FOREIGN KEY`: DSQL enforces them, but this template keeps referential integrity in code
   for write throughput (see `dsql.md`).

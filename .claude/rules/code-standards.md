@@ -31,6 +31,11 @@ and code — this file is the gate, the doc is the detail.
 - [ ] **UUID v7 primary keys**, client-generated via `uuid::Uuid::now_v7()` — not v4
       (`gen_random_uuid()`), not `SERIAL`/sequential PKs.
 - [ ] **One DDL statement per migration file**; never mix DDL and DML in one transaction.
+- [ ] **A shipped migration is never edited.** Schema changes add a new numbered file. On
+      SQLite, sqlx refuses a database whose recorded checksum no longer matches; the DSQL
+      runner records only versions, so an edit there is silently skipped and schemas drift.
+- [ ] Migration SQL is **literal**, never generated from the sea-query `Iden` enums — those
+      track the current schema, not its history.
 - [ ] Indexes on non-empty tables use **`CREATE INDEX ASYNC`** (sync `CREATE INDEX` only on
       empty tables).
 - [ ] Every write is **idempotent and wrapped in OCC retry** (`with_dsql_retry!`, SQLSTATE
