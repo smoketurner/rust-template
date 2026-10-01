@@ -52,6 +52,11 @@ Notes:
 - Always include `[lints] workspace = true` so the strict lint baseline applies.
 - Pull dependencies from the workspace menu with `{ workspace = true, features = [...] }`.
   If a crate you need isn't in `[workspace.dependencies]` yet, add it there (pinned, current
-  version) rather than inline in the member.
+  version) rather than inline in the member, and add its crate name to
+  `absolute-paths-allowed-crates` in `.clippy.toml` so `clippy::absolute_paths` only reports
+  paths into your own crates.
+- Don't add a `[lints.clippy]` table to a member: Cargo replaces the inherited workspace
+  table rather than merging it, so the crate loses every baseline lint. Relax a lint with
+  `#[expect(clippy::..., reason = "...")]` instead.
 - For binaries that open TLS connections, install the aws-lc-rs provider once at startup —
   see `docs/crypto.md`.

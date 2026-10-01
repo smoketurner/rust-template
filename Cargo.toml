@@ -95,10 +95,24 @@ trivial_casts         = "warn"
 trivial_numeric_casts = "warn"
 unused_lifetimes      = "warn"
 single_use_lifetimes  = "warn"
+unused_qualifications = "warn"
+unused_import_braces  = "warn"
+unused_macro_rules    = "warn"
+let_underscore_drop   = "warn"
+redundant_lifetimes   = "warn"
+unit_bindings         = "warn"
+elided_lifetimes_in_paths      = "warn"
+explicit_outlives_requirements = "warn"
+meta_variable_misuse  = "warn"
 
 [workspace.lints.clippy]
 # Whole pedantic group on as warnings; specific rules below override it.
 pedantic = { level = "warn", priority = -1 }
+
+# Own-crate items are imported with `use`, not spelled inline as deep paths.
+# Configured in `.clippy.toml` (`absolute-paths-*`) so only `crate::` and
+# own-crate paths are reported.
+absolute_paths = "deny"
 
 # Panic prevention
 unwrap_used         = "deny"
@@ -162,6 +176,73 @@ print_stderr       = "deny"
 rc_buffer          = "deny"
 map_unwrap_or      = "deny"
 let_underscore_must_use = "deny"
+
+# Clarity: say what is meant, without needless work
+clone_on_ref_ptr        = "deny"
+deref_by_slicing        = "deny"
+needless_collect        = "deny"
+needless_pass_by_ref_mut = "deny"
+needless_raw_strings    = "deny"
+or_fun_call             = "deny"
+redundant_clone         = "deny"
+redundant_type_annotations = "deny"
+renamed_function_params = "deny"
+str_to_string           = "deny"
+string_add              = "deny"
+format_push_string      = "deny"
+use_self                = "deny"
+if_then_some_else_none  = "deny"
+useless_let_if_seq      = "deny"
+equatable_if_let        = "deny"
+branches_sharing_code   = "deny"
+unnecessary_self_imports = "deny"
+unnecessary_struct_initialization = "deny"
+unneeded_field_pattern  = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+empty_structs_with_brackets = "deny"
+empty_enum_variants_with_brackets = "deny"
+empty_drop              = "deny"
+trait_duplication_in_bounds = "deny"
+type_repetition_in_bounds = "deny"
+iter_on_single_items    = "deny"
+iter_on_empty_collections = "deny"
+nonstandard_macro_braces = "deny"
+derive_partial_eq_without_eq = "deny"
+
+# Results and values that are silently dropped or never used
+let_underscore_untyped  = "deny"
+unused_result_ok        = "deny"
+try_err                 = "deny"
+collection_is_never_read = "deny"
+unused_peekable         = "deny"
+
+# Likely bugs
+significant_drop_in_scrutinee = "deny"
+mixed_read_write_in_expression = "deny"
+debug_assert_with_mut_call = "deny"
+suspicious_xor_used_as_pow = "deny"
+set_contains_or_insert  = "deny"
+read_zero_byte_vec      = "deny"
+path_buf_push_overwrite = "deny"
+pathbuf_init_then_push  = "deny"
+filetype_is_file        = "deny"
+fn_to_numeric_cast_any  = "deny"
+as_underscore           = "deny"
+infinite_loop           = "deny"
+non_send_fields_in_send_ty = "deny"
+string_lit_as_bytes     = "deny"
+string_lit_chars_any    = "deny"
+verbose_file_reads      = "deny"
+clear_with_drain        = "deny"
+while_float             = "deny"
+imprecise_flops         = "deny"
+suboptimal_flops        = "deny"
+mutex_integer           = "deny"
+rc_mutex                = "deny"
+
+# Tests
+cfg_not_test            = "deny"
+redundant_test_prefix   = "deny"
 
 # No silent escape hatches: every allow must justify itself (use #[expect]).
 allow_attributes              = "deny"

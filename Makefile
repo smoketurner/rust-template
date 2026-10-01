@@ -12,7 +12,7 @@ CARGO ?= cargo
 #   make css-build SERVER_CRATE=my-server
 SERVER_CRATE ?= app-server
 
-.PHONY: all build check clean fmt fmt-check lint test test-coverage test-mutants deny hooks css-dev css-build run help
+.PHONY: all build check clean fmt fmt-check lint test test-coverage test-mutants deny crypto-gates hooks css-dev css-build run help
 
 all: build
 
@@ -50,6 +50,18 @@ test-mutants: ## Run mutation testing (requires cargo-mutants)
 
 deny: ## Check advisories, licenses, bans, and sources
 	$(CARGO) deny check
+
+crypto-gates: ## No ring or OpenSSL anywhere in the dependency tree (see docs/crypto.md)
+	@for crate in ring openssl-sys; do \
+		out=$$($(CARGO) tree --locked -i "$$crate" 2>&1); status=$$?; \
+		if [ $$status -ne 0 ]; then \
+			echo "$$out" | grep -q 'did not match any packages' && continue; \
+			echo "$$out"; exit 1; \
+		fi; \
+		if echo "$$out" | grep -q "^$$crate v"; then \
+			echo "$$crate is in the dependency tree:"; echo "$$out"; exit 1; \
+		fi; \
+	done; echo "dependency tree is clean of ring and OpenSSL"
 
 hooks: ## Install prek git hooks (pre-commit + pre-push)
 	prek install
