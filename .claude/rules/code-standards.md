@@ -18,8 +18,8 @@ and code — this file is the gate, the doc is the detail.
       `sqlx` → `tls-rustls-aws-lc-rs`, etc.).
 - [ ] Binaries install the default provider **once** at the top of `main`
       (`aws_lc_rs::default_provider().install_default()`), before any TLS use.
-- [ ] After touching TLS deps: `cargo tree -i ring` and `cargo tree -i openssl-sys` return no
-      match; `cargo deny check` passes.
+- [ ] After touching TLS deps: `make crypto-gates` (also run in CI) and `cargo deny check`
+      pass.
 
 ## Data layer & DSQL → [docs/dsql.md](../../docs/dsql.md), [docs/migrations.md](../../docs/migrations.md)
 

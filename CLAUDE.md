@@ -75,13 +75,14 @@ data-layer, crypto, or dependency change:
 ## Common commands
 
 ```bash
-make build     # cargo build --release
-make fmt       # cargo fmt --all
-make lint      # cargo clippy --workspace --all-targets --all-features -- -D warnings
-make test      # cargo test --workspace --all-features
-make deny      # cargo deny check
-make css-build # build + minify Tailwind for the server crate
-make help      # list targets
+make build        # cargo build --release
+make fmt          # cargo fmt --all
+make lint         # cargo clippy --workspace --all-targets --all-features -- -D warnings
+make test         # cargo test --workspace --all-features
+make deny         # cargo deny check
+make crypto-gates # fail if ring or openssl-sys is in the dependency tree
+make css-build    # build + minify Tailwind for the server crate
+make help         # list targets
 ```
 
 Run a specific test (once at least one crate exists):
