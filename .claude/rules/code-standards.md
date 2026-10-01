@@ -23,7 +23,11 @@ and code — this file is the gate, the doc is the detail.
 
 ## Data layer & DSQL → [docs/dsql.md](../../docs/dsql.md), [docs/migrations.md](../../docs/migrations.md)
 
-- [ ] **No `FOREIGN KEY`** in DDL — enforce referential integrity in code.
+- [ ] **No `FOREIGN KEY`** in DDL (a template choice: DSQL enforces them, at the cost of
+      extra reads and parent-row conflicts on every write). Enforce referential integrity in
+      code: `SELECT … FOR KEY SHARE` the parent in the child write's transaction — a plain
+      `SELECT` doesn't conflict under DSQL's OCC.
+- [ ] Every `numeric` column declares precision and scale (unsized becomes `numeric(18,6)`).
 - [ ] **UUID v7 primary keys**, client-generated via `uuid::Uuid::now_v7()` — not v4
       (`gen_random_uuid()`), not `SERIAL`/sequential PKs.
 - [ ] **One DDL statement per migration file**; never mix DDL and DML in one transaction.
