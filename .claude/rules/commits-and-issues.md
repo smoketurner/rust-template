@@ -5,7 +5,8 @@ Customize sections below for this project.
 
 > **Domain gates:** for any data-layer, crypto, or dependency change, the review gates in
 > [`code-standards.md`](code-standards.md) are mandatory — read it and the linked `docs/*.md`
-> before committing or reviewing.
+> before committing or reviewing. Any claim about what an RFC, protocol, or AWS service
+> requires follows [`specs-are-source-of-truth.md`](specs-are-source-of-truth.md).
 
 ## Commit Message Format
 
