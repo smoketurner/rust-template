@@ -41,9 +41,15 @@ and code — this file is the gate, the doc is the detail.
 ## Workspace hygiene → [docs/architecture.md](../../docs/architecture.md)
 
 - [ ] Every member crate declares `[lints] workspace = true` — no crate escapes the baseline.
+      No member adds its own `[lints.clippy]` table: Cargo **replaces** rather than merges
+      lint tables, so one local override silently drops every workspace lint. Relax a lint
+      with `#[expect(..., reason = "...")]` at the crate root or item instead.
+- [ ] Own-crate items are imported with `use`, never spelled as `crate::a::b::Item` inline
+      (`clippy::absolute_paths` is denied; external crates are exempted in `.clippy.toml`).
 - [ ] Dependencies are pinned `=x.y.z` with `default-features = false` in
       `[workspace.dependencies]`; members opt in with `{ workspace = true, features = [...] }`.
-      New deps are added to the workspace menu (current version looked up), never inline.
+      New deps are added to the workspace menu (current version looked up), never inline,
+      and to `absolute-paths-allowed-crates` in `.clippy.toml`.
 - [ ] Panics opt out narrowly in tests only: `#[expect(clippy::unwrap_used, reason = "...")]`.
 - [ ] `thiserror` for library crates, `anyhow` for binaries; `tracing` for logging, never
       `println!`/`eprintln!`.

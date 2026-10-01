@@ -11,4 +11,57 @@ too-many-lines-threshold       = 100
 # Short names that are acceptable below the min-chars threshold.
 allowed-idents-below-min-chars = ["x", "y", "z", "i", "j", "k", "n", "s", "e", "id", "db", "tx", "rx", "ok"]
 
+# Items from our own crates are brought in with `use`, not spelled inline as
+# `crate::db::store::UserStore` or `my_common::config::Config`: import the type,
+# trait, or const directly, and import a function's parent module
+# (`use crate::db;` then `db::connect(..)`). `clippy::absolute_paths` flags any
+# path of more than two segments rooted at a crate; every external crate is
+# listed below so the lint reports only `crate::` and own-crate paths. The lint
+# is denied in `[workspace.lints.clippy]`; a dependency added to
+# `[workspace.dependencies]` belongs in this list too.
+absolute-paths-max-segments = 2
+absolute-paths-allowed-crates = [
+    "std",
+    "core",
+    "alloc",
+    "proc_macro",
+    "anyhow",
+    "askama",
+    "aws_config",
+    "aws_credential_types",
+    "aws_lc_rs",
+    "aws_sdk_dsql",
+    "axum",
+    "axum_extra",
+    "axum_server",
+    "base64",
+    "clap",
+    "fluent_bundle",
+    "i18n_embed",
+    "i18n_embed_fl",
+    "jiff",
+    "mime_guess",
+    "proptest",
+    "rust_embed",
+    "rustls",
+    "sea_query",
+    "sea_query_sqlx",
+    "secrecy",
+    "serde",
+    "serde_json",
+    "sqlx",
+    "thiserror",
+    "tokio",
+    "tokio_rustls",
+    "tokio_util",
+    "tower",
+    "tower_governor",
+    "tower_http",
+    "tracing",
+    "tracing_subscriber",
+    "unic_langid",
+    "uuid",
+    "webpki_roots",
+]
+
 # MSRV is read automatically from the workspace `rust-version` field.
