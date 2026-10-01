@@ -65,6 +65,9 @@ data-layer, crypto, or dependency change:
 
 - **`.claude/rules/code-standards.md`** — crypto (aws-lc-rs only), DSQL/data-layer schema
   rules, and workspace hygiene, as review-gate checklists linking to `docs/`.
+- **`.claude/rules/specs-are-source-of-truth.md`** — claims about what an RFC, protocol,
+  or AWS service (DSQL limits, concurrency) requires are quoted from a document fetched this
+  session, never stated from memory.
 - **`.claude/rules/development-discipline.md`** — how agents carry out design,
   implementation, diagnostics, and agent-team hand-offs (the *how*, complementing
   `code-standards.md`'s *what*).

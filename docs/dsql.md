@@ -5,14 +5,14 @@ with **optimistic concurrency control** and a restricted SQL surface. Schema and
 must be written for DSQL, not vanilla Postgres. This is the reference; `migrations.md` and
 `database.md` show the code.
 
-> Quotas and the supported-SQL list change. Treat the numbers below as a design guide and
-> confirm against the current AWS docs (links inline) before relying on a specific limit.
+> Quotas and the supported-SQL list change. Last verified against the
+> [Aurora DSQL release notes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/release-notes.html) on **2026-10-01**. Check the release notes for anything
+> newer before relying on a specific limit or "unsupported" entry.
 
 ## What is not supported
 
 | Feature | Status | What to do instead |
 |---|---|---|
-| `FOREIGN KEY` / `REFERENCES` | ✗ not enforced | Enforce referential integrity in application code |
 | Triggers | ✗ | Move logic to the app |
 | Stored procedures / PL/pgSQL | ✗ | `CREATE FUNCTION ... LANGUAGE SQL` only |
 | Materialized views | ✗ | Regular views (✓, ≤ ~5,000) or app-side caching |
@@ -29,8 +29,11 @@ must be written for DSQL, not vanilla Postgres. This is the reference; `migratio
 | `SECURITY DEFINER` functions | ✗ | Runs as caller; re-grant table access or enforce RLS in the app |
 
 Supported and commonly used: `uuid`, `text`/`varchar`, integer/`numeric`/float types,
-`boolean`, `bytea`, date/time/`timestamptz` (UTC), `jsonb` (≤ 1 MiB), views, `CREATE DOMAIN`,
-and `GENERATED ALWAYS AS (expr) STORED` columns.
+`boolean`, `bytea`, date/time/`timestamptz` (UTC), `json`/`jsonb` (≤ 1 MiB compressed), views,
+`CREATE DOMAIN`, `GENERATED ALWAYS AS (expr) STORED` columns, partial and expression indexes,
+`SELECT … FOR UPDATE` / `FOR KEY SHARE`, `CREATE STATISTICS`, and `FOREIGN KEY` constraints
+(enforced since August 2026, but this template doesn't declare them — see
+[Referential integrity in code](#referential-integrity-in-code)).
 
 Sources: [supported SQL features](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-sql-features.html),
 [supported data types](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html),
@@ -38,16 +41,19 @@ Sources: [supported SQL features](https://docs.aws.amazon.com/aurora-dsql/latest
 
 ## Type and column rules
 
-- **`NUMERIC` is capped at precision 38, scale 37.** Specify precision explicitly
-  (`numeric(20,10)`); DSQL rejects unbounded `NUMERIC`.
+- **Declare `NUMERIC` precision and scale explicitly** (`numeric(20,10)`; up to precision
+  1000). An unsized `numeric` silently becomes `numeric(18,6)` on DSQL, so values with more
+  than six decimal places are rounded on write, unlike Postgres.
 - **C collation, database-wide.** Per-column `COLLATE` is rejected, and `ORDER BY` on text
   sorts by raw byte value (uppercase before lowercase, non-ASCII after `z`). Use `lower(col)`
   for case-insensitive ordering and comparison.
 - **No array columns.** Store collections as `jsonb` and expand with
   `jsonb_array_elements_text(col)` at query time.
-- **`enum` → `varchar` + inline `CHECK`, fixed at `CREATE TABLE`.** Adding or changing a
-  `CHECK` later means recreating the table (`ALTER ... TYPE` / `DROP CONSTRAINT` are
-  unsupported), so settle the allowed values up front.
+- **`enum` → `varchar` + inline `CHECK`.** To change the allowed values later, add the new
+  constraint with `ALTER TABLE … ADD CONSTRAINT … CHECK (…) NOT VALID`, validate existing rows
+  with `ALTER TABLE ASYNC … VALIDATE CONSTRAINT` (an async job, like `CREATE INDEX ASYNC`),
+  then `DROP CONSTRAINT` the old one — three migrations. `ALTER COLUMN … TYPE` is still
+  unsupported.
 - **Composite types** become a `jsonb` column (flexible) or separate columns (indexable).
 - **At most 10 schemas per database.** Past 10, consolidate into `public` with table-name
   prefixes.
@@ -76,8 +82,11 @@ Reach for them only when you genuinely need monotonic ids.
   DML statements in one transaction), never both.
 - Schema changes bump a distributed catalog version. Sessions holding a stale version get
   **`40001` / `OC001`** ("schema updated by another transaction") and must retry.
-- `ALTER TABLE` supports `ADD`/`DROP`/`RENAME COLUMN` and `RENAME`; you **cannot change the
-  primary key** after creation — design it up front.
+- `ALTER TABLE` supports `ADD`/`DROP`/`RENAME COLUMN`, `RENAME`, `SET`/`DROP DEFAULT`,
+  `DROP NOT NULL`, identity changes, `ADD CONSTRAINT … NOT VALID` (`CHECK` or `FOREIGN KEY`;
+  an added constraint must be `NOT VALID`), `ALTER TABLE ASYNC … VALIDATE CONSTRAINT`, and
+  `DROP CONSTRAINT`. You **cannot change a column's type or the primary key** after creation —
+  design them up front.
 
 Source: [DDL and distributed transactions](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-ddl.html).
 
@@ -94,14 +103,12 @@ key-size cap. Near the limit, prefer composite and `INCLUDE` indexes over many s
 ones.
 
 **Converting Postgres index types.** Most rewrite mechanically (`USING gin/gist/brin/hash` →
-btree, `CONCURRENTLY` → `ASYNC`, `INCLUDE` and sort order preserved). The cases that need a
-schema change:
+btree, `CONCURRENTLY` → `ASYNC`; `INCLUDE`, sort order, partial `WHERE …` predicates, and
+expression keys such as `lower(email)` carry over unchanged). Index expressions and partial
+predicates may use only immutable functions and operators, and the planner uses a partial
+index only when it can prove the query's `WHERE` implies the index predicate. SQLite supports
+both forms, so the two migration sets stay aligned. The case that still needs a schema change:
 
-- **Partial index** (`WHERE …`) — drop the predicate for a full index, or fold the filter
-  column into a composite index.
-- **Expression index** (`lower(email)`, `preferences->>'city'`) — add a
-  `GENERATED ALWAYS AS (expr) STORED` column and index that. Use `STORED`, not
-  `ADD COLUMN` + backfill (the gap between the two statements leaves new rows `NULL`).
 - **GIN/GiST** — extract the key to a `STORED` generated column + btree, normalize arrays to a
   join table, or move full-text/fuzzy search to OpenSearch.
 
@@ -134,13 +141,25 @@ Source: [concurrency control](https://docs.aws.amazon.com/aurora-dsql/latest/use
 
 ## Referential integrity in code
 
-DSQL ignores `FOREIGN KEY`, so relationships are enforced in application code. The rule that
-keeps this correct under OCC: **the existence check and the write run in the same
-transaction.** A `SELECT` confirming the parent row adds it to the transaction's read set; if a
-concurrent transaction deletes that parent and commits first, this transaction's commit is
-rejected with `40001` and retries — so the check can't go stale between validate and insert. A
-validation helper must be `LANGUAGE sql` (`plpgsql` is rejected); act on a false result by
-raising in the application, inside that same transaction.
+DSQL has enforced `FOREIGN KEY` constraints since August 2026
+([foreign keys](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-foreign-key-constraints.html)),
+but this template still doesn't declare them. Every DML statement on a referencing or
+referenced table pays extra reads to check the constraint, and each referencing write adds a
+commit-time conflict on the parent row, so hot tables lose write throughput. Relationships are
+enforced in application code instead.
+
+The rule that keeps this correct under OCC: **check the parent with `SELECT … FOR KEY SHARE`
+in the same transaction as the child write.** A plain `SELECT` never conflicts in DSQL — OCC
+compares writes, not reads — so a parent deleted between your check and your commit would
+leave an orphan. `FOR KEY SHARE` (what DSQL's own foreign keys use internally) makes a
+concurrent `DELETE` of the parent, or a change to its key columns, fail whichever transaction
+commits second with `40001`, and the retry re-runs the check. Updates to the parent's non-key
+columns don't conflict. In sea-query that is `.lock(LockType::KeyShare)`;
+`SqliteQueryBuilder` omits the clause, which is safe because SQLite allows one writer at a
+time. A delete of a parent checks for children in its own transaction; the conflict between
+its `DELETE` and a concurrent child's `FOR KEY SHARE` closes the race from that side.
+
+Source: [concurrency control](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-concurrency-control.html).
 
 ## Transaction limits (verify current values)
 
@@ -174,12 +193,15 @@ multi-tenancy). Where they differ, this doc and `code-standards.md` win.
 ## Design checklist
 
 - [ ] UUID v7 primary keys, client-generated; no `gen_random_uuid()` (v4) or `SERIAL`
-- [ ] No foreign keys in DDL; validate relationships in code, in the write's transaction
+- [ ] No foreign keys in DDL; validate relationships in code with `FOR KEY SHARE` on the parent,
+      in the write's transaction
 - [ ] One DDL statement per migration file; never DDL + DML together
 - [ ] Indexes on non-empty tables via `CREATE INDEX ASYNC` + `sys.wait_for_job`
-- [ ] ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key; expression/partial/GIN indexes converted
+- [ ] ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key; GIN/GiST indexes converted to btree
 - [ ] All writes idempotent and wrapped in OCC retry
 - [ ] Bulk writes chunked under the per-transaction row/byte limits
 - [ ] Pool `max_lifetime` below the 60-minute connection cap; token refresh before expiry
-- [ ] `numeric`/`varchar`+`CHECK`/`jsonb` instead of `money`/`enum`/custom types
-- [ ] `enum` as `varchar` + inline `CHECK` at `CREATE TABLE`; ≤ 10 schemas per database
+- [ ] `numeric(p,s)`/`varchar`+`CHECK`/`jsonb` instead of `money`/`enum`/custom types; every
+      `numeric` declares precision and scale
+- [ ] `enum` as `varchar` + inline `CHECK`; changes go through `NOT VALID` + async
+      `VALIDATE CONSTRAINT`; ≤ 10 schemas per database

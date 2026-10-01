@@ -4,6 +4,10 @@ Two backends, two migration directories, two runners. SQLite uses sqlx's standar
 transactional migrator; DSQL needs a custom runner because it rejects DDL inside multi-
 statement transactions and builds indexes asynchronously (see `dsql.md`).
 
+> The DSQL rules here were last verified against the
+> [Aurora DSQL release notes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/release-notes.html) on **2026-10-01**. Check the release notes for anything
+> newer before relying on them.
+
 ```
 crates/<name>-server/
   migrations/
@@ -17,14 +21,24 @@ crates/<name>-server/
 ## Authoring rules (postgres/ dir)
 
 - **One DDL statement per file.** Never mix DDL and DML in one file.
-- **UUID v7 primary keys** (client-supplied, `uuid::Uuid::now_v7()`), no `SERIAL`. No `FOREIGN KEY`.
+- **Never edit a shipped migration.** Change the schema by adding a new numbered file in
+  both directories. On SQLite, sqlx's migrator checksums each applied file and refuses a
+  database whose recorded checksum no longer matches. The DSQL runner below records only
+  the version, so an edited file is silently skipped on every database that already ran it
+  and those schemas drift from new ones.
+- **Write migration SQL literally.** Don't generate it from the sea-query `Iden` enums
+  (`sea-query.md`): they describe the schema as it is now, so a generated migration would
+  change meaning as the schema evolves.
+- **UUID v7 primary keys** (client-supplied, `uuid::Uuid::now_v7()`), no `SERIAL`. No
+  `FOREIGN KEY`: DSQL enforces them, but this template keeps referential integrity in code
+  for write throughput (see `dsql.md`).
 - **Indexes in their own file** using `CREATE INDEX ASYNC` (synchronous `CREATE INDEX` only
   works on empty tables). Limits: ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key. Convert
-  Postgres index types — `CONCURRENTLY` → `ASYNC`, `USING gin/gist/brin` → btree; a partial
-  index drops its `WHERE`, and an expression index becomes a `GENERATED ALWAYS AS (expr)
-  STORED` column that the index targets.
-- **Settle `enum`/`CHECK` values at `CREATE TABLE`.** Changing them later forces a
-  table-recreation migration — DSQL has no `ALTER ... TYPE` / `DROP CONSTRAINT` (see `dsql.md`).
+  Postgres index types — `CONCURRENTLY` → `ASYNC`, `USING gin/gist/brin` → btree. Partial
+  (`WHERE …`) and expression (`lower(email)`) indexes carry over as written.
+- **Changing a `CHECK` takes three migrations:** `ADD CONSTRAINT … NOT VALID`, then
+  `ALTER TABLE ASYNC … VALIDATE CONSTRAINT` (an async job), then `DROP CONSTRAINT` on the old
+  one. A column's type can't be changed (see `dsql.md`).
 - Keep the SQLite copy semantically equivalent; differences (e.g. `TEXT` vs `uuid`) are fine
   as long as the columns line up.
 
@@ -152,6 +166,10 @@ SELECT * FROM sys.wait_for_job('<job_id>');
 For a template-scale schema, creating the index in its own migration and letting it finish
 asynchronously is usually enough; add the `wait_for_job` step only when a subsequent step
 truly needs the index present.
+
+`ALTER TABLE ASYNC … VALIDATE CONSTRAINT` is also an async job and returns a `job_id`. Wait
+for it before the migration that drops the constraint it replaces; if validation finds
+violating rows, the job fails and the constraint stays `NOT VALID`.
 
 ## Verifying both backends
 

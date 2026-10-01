@@ -5,7 +5,8 @@ Customize sections below for this project.
 
 > **Domain gates:** for any data-layer, crypto, or dependency change, the review gates in
 > [`code-standards.md`](code-standards.md) are mandatory — read it and the linked `docs/*.md`
-> before committing or reviewing.
+> before committing or reviewing. Any claim about what an RFC, protocol, or AWS service
+> requires follows [`specs-are-source-of-truth.md`](specs-are-source-of-truth.md).
 
 ## Commit Message Format
 
@@ -85,6 +86,7 @@ BREAKING CHANGE: removed smol dependency, applications must now use tokio runtim
 - Do not use vague types: ~~`update: ...`~~ — pick a specific type from the table
 - Do not mention AI tools, co-authors, or generation in commit messages
 - Do not use emoji in commit messages
+- Do not use language like "critical", "comprehensive", "robust" — a fix is a fix
 
 ## Issue Guidelines
 
