@@ -86,6 +86,7 @@ BREAKING CHANGE: removed smol dependency, applications must now use tokio runtim
 - Do not use vague types: ~~`update: ...`~~ — pick a specific type from the table
 - Do not mention AI tools, co-authors, or generation in commit messages
 - Do not use emoji in commit messages
+- Do not use language like "critical", "comprehensive", "robust" — a fix is a fix
 
 ## Issue Guidelines
 
