@@ -65,3 +65,11 @@ absolute-paths-allowed-crates = [
 ]
 
 # MSRV is read automatically from the workspace `rust-version` field.
+
+# Conventions from CLAUDE.md, enforced. Add project-specific bans here (e.g. a
+# clock read that must go through a per-request timestamp) with a reason that
+# names the sanctioned alternative; opt out with `#[expect(clippy::disallowed_methods, reason = "...")]`.
+disallowed-methods = [
+    { path = "uuid::Uuid::new_v4", reason = "IDs are UUID v7: use `Uuid::now_v7()`" },
+    { path = "std::time::SystemTime::now", reason = "date/time goes through jiff: use `jiff::Timestamp::now()`" },
+]
