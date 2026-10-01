@@ -4,6 +4,10 @@ Two backends, two migration directories, two runners. SQLite uses sqlx's standar
 transactional migrator; DSQL needs a custom runner because it rejects DDL inside multi-
 statement transactions and builds indexes asynchronously (see `dsql.md`).
 
+> The DSQL rules here were last verified against the
+> [Aurora DSQL release notes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/release-notes.html) on **2026-10-01**. Check the release notes for anything
+> newer before relying on them.
+
 ```
 crates/<name>-server/
   migrations/

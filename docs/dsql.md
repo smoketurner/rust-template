@@ -5,8 +5,9 @@ with **optimistic concurrency control** and a restricted SQL surface. Schema and
 must be written for DSQL, not vanilla Postgres. This is the reference; `migrations.md` and
 `database.md` show the code.
 
-> Quotas and the supported-SQL list change. Treat the numbers below as a design guide and
-> confirm against the current AWS docs (links inline) before relying on a specific limit.
+> Quotas and the supported-SQL list change. Last verified against the
+> [Aurora DSQL release notes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/release-notes.html) on **2026-10-01**. Check the release notes for anything
+> newer before relying on a specific limit or "unsupported" entry.
 
 ## What is not supported
 

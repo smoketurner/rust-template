@@ -17,7 +17,10 @@ a row in DSQL's conflict set; AWS's concurrency-control guide says reads never c
 without `FOR UPDATE` / `FOR KEY SHARE`, so the documented pattern allowed orphan rows.
 
 Service docs drift as well: a limit or "unsupported" feature that was true last year may
-not be now. Re-check the current page before relying on one.
+not be now. Re-check the current page before relying on one. A doc in this repo that
+restates a service's rules (`docs/dsql.md`, `docs/migrations.md`) carries a "last verified"
+date: whoever re-checks it against the source updates that date, even when nothing else
+changes, and an edit that didn't re-check the whole doc leaves the date alone.
 
 This applies to reviews and PR descriptions as much as to code. "This violates the spec"
 or "DSQL doesn't support X" is a normative claim and needs the same evidence as the code.
