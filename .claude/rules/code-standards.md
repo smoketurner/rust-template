@@ -36,8 +36,8 @@ and code — this file is the gate, the doc is the detail.
       runner records only versions, so an edit there is silently skipped and schemas drift.
 - [ ] Migration SQL is **literal**, never generated from the sea-query `Iden` enums — those
       track the current schema, not its history.
-- [ ] Indexes on non-empty tables use **`CREATE INDEX ASYNC`** (sync `CREATE INDEX` only on
-      empty tables).
+- [ ] Every index uses **`CREATE [UNIQUE] INDEX ASYNC`**, even on an empty table (DSQL's
+      `CREATE INDEX` reference requires the `ASYNC` keyword).
 - [ ] Every write is **idempotent and wrapped in OCC retry** (`with_dsql_retry!`, SQLSTATE
       `40001`).
 - [ ] Bulk writes chunked under the per-transaction row/byte limits; pool `max_lifetime` is

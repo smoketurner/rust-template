@@ -92,10 +92,13 @@ Source: [DDL and distributed transactions](https://docs.aws.amazon.com/aurora-ds
 
 ## Indexes are asynchronous
 
-- `CREATE INDEX` (synchronous) only works on an **empty** table.
-- For a table with rows, use `CREATE INDEX ASYNC`, which returns a `job_id` immediately and
-  builds without locking. Wait for it before depending on the index:
-  `SELECT * FROM sys.wait_for_job('<job_id>');`
+- **Always write `CREATE [UNIQUE] INDEX ASYNC`**, even on an empty table. AWS's own pages
+  disagree on the plain form: the `CREATE INDEX` reference says index creation "is always
+  asynchronous, so you must specify the `ASYNC` keyword", while the troubleshooting page
+  only requires `ASYNC` "to create an index on a table with existing rows". `ASYNC` is valid
+  either way, so use it everywhere.
+- `CREATE INDEX ASYNC` returns a `job_id` immediately and builds without locking. Wait for it
+  before depending on the index: `SELECT * FROM sys.wait_for_job('<job_id>');`
 - Index creation is async, so it lives outside the one-DDL-per-transaction rule.
 
 **Limits:** at most **24 indexes per table**, **8 columns per index**, and a **1 KiB**
@@ -116,7 +119,23 @@ both forms, so the two migration sets stay aligned. The case that still needs a 
 `SELECT indexrelid::regclass, indisvalid FROM pg_index WHERE NOT indisvalid;` and don't depend
 on it until `indisvalid = true`.
 
-Source: [asynchronous indexes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-create-index-async.html).
+**Partial indexes** (`WHERE predicate`, supported since 2026-09-15) index only the rows the
+predicate keeps, so they are smaller and cheaper to maintain when queries target a
+well-defined subset, such as active rows rather than archived ones. The predicate may
+reference any column, not only the indexed ones. A partial `UNIQUE` index enforces
+uniqueness only within that subset, for example one live row per email while soft-deleted
+rows keep their old value:
+
+```sql
+CREATE UNIQUE INDEX ASYNC uq_users_email_live ON users (email) WHERE deleted_at IS NULL;
+```
+
+Queries must repeat the predicate (`… WHERE deleted_at IS NULL AND email = $1`) for the
+planner to pick the index; an index the planner can't prove applicable is simply skipped.
+
+Sources: [asynchronous indexes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-create-index-async.html),
+[`CREATE INDEX`](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/create-index-syntax-support.html),
+[partial indexes announcement](https://aws.amazon.com/about-aws/whats-new/2026/10/aurora-dsql-partial-indexes/).
 
 ## Optimistic concurrency control
 
@@ -196,7 +215,7 @@ multi-tenancy). Where they differ, this doc and `code-standards.md` win.
 - [ ] No foreign keys in DDL; validate relationships in code with `FOR KEY SHARE` on the parent,
       in the write's transaction
 - [ ] One DDL statement per migration file; never DDL + DML together
-- [ ] Indexes on non-empty tables via `CREATE INDEX ASYNC` + `sys.wait_for_job`
+- [ ] Every index via `CREATE INDEX ASYNC` + `sys.wait_for_job`, even on an empty table
 - [ ] ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key; GIN/GiST indexes converted to btree
 - [ ] All writes idempotent and wrapped in OCC retry
 - [ ] Bulk writes chunked under the per-transaction row/byte limits
