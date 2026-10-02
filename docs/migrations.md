@@ -32,10 +32,11 @@ crates/<name>-server/
 - **UUID v7 primary keys** (client-supplied, `uuid::Uuid::now_v7()`), no `SERIAL`. No
   `FOREIGN KEY`: DSQL enforces them, but this template keeps referential integrity in code
   for write throughput (see `dsql.md`).
-- **Indexes in their own file** using `CREATE INDEX ASYNC` (synchronous `CREATE INDEX` only
-  works on empty tables). Limits: ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key. Convert
+- **Indexes in their own file**, always `CREATE [UNIQUE] INDEX ASYNC`, even on an empty
+  table (see `dsql.md`). Limits: ≤ 24 indexes/table, ≤ 8 columns/index, ≤ 1 KiB key. Convert
   Postgres index types — `CONCURRENTLY` → `ASYNC`, `USING gin/gist/brin` → btree. Partial
-  (`WHERE …`) and expression (`lower(email)`) indexes carry over as written.
+  (`WHERE …`) and expression (`lower(email)`) indexes carry over as written; the SQLite copy
+  drops `ASYNC` and keeps the same predicate.
 - **Changing a `CHECK` takes three migrations:** `ADD CONSTRAINT … NOT VALID`, then
   `ALTER TABLE ASYNC … VALIDATE CONSTRAINT` (an async job), then `DROP CONSTRAINT` on the old
   one. A column's type can't be changed (see `dsql.md`).
