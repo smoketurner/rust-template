@@ -35,7 +35,7 @@ jobs:
       - name: Setup Rust toolchain
         run: rustup show
       - name: Setup Rust cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: "v1"
           shared-key: "fmt"
@@ -53,13 +53,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Setup Rust toolchain
         run: rustup show
       - name: Install hook tools
-        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
         with:
           tool: prek@0.5.4,shellcheck@0.11.0,shfmt@3.14.1,zizmor@1.30.1
       # install-action has no actionlint manifest; fetch the release and verify its checksum.
@@ -90,7 +90,7 @@ jobs:
       - name: Setup Rust toolchain
         run: rustup show
       - name: Setup Rust cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: "v1"
           shared-key: "clippy-${{ runner.os }}"
@@ -125,7 +125,7 @@ jobs:
       - name: Setup Rust toolchain
         run: rustup show
       - name: Setup Rust cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: "v1"
           shared-key: "debug-${{ runner.os }}"
