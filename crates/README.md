@@ -37,7 +37,8 @@ version.workspace      = true
 edition.workspace      = true
 rust-version.workspace = true
 license.workspace      = true
-publish      = false
+repository.workspace   = true
+publish.workspace      = true
 
 [lints]
 workspace = true
